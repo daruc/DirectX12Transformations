@@ -78,9 +78,11 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		g_engine.Render();
 		return 0;
 	case WM_MOUSEMOVE:
-		bool rightMouseBtnIsDown = (wParam & 0x0002);
-		g_engine.Input(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), rightMouseBtnIsDown);
-		return 0;
+		{
+			bool rightMouseBtnIsDown = (wParam & 0x0002);
+			g_engine.Input(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), rightMouseBtnIsDown);
+			return 0;
+		}
 	}
 
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

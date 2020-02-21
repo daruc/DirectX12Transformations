@@ -49,7 +49,6 @@ private:
 	float m_mouseY;
 	float m_mouseDeltaX;	// when right mouse button was pressed
 	float m_mouseDeltaY;
-	bool m_rightMouseBtnPressed;
 
 	high_resolution_clock::time_point m_prevTime;
 
@@ -127,6 +126,8 @@ public:
 
 	void Init(HWND hwnd);
 	void Input(float mouseX, float mouseY, bool rightMouseBtnPressed);
+	void InputRightBtnPressed(float mouseX, float mouseY);
+	void InputRightBtnReleased();
 	void Update();
 	void Render();
 	void Destroy();

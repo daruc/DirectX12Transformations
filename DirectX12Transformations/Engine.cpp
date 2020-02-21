@@ -201,17 +201,17 @@ void Engine::CreatePipelineStateObject()
 void Engine::CreateVertexBuffer()
 {
 	Vertex vList[] = {
-		// first quad (closer to camera, blue)
-		{ -0.5f,  0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
-		{  0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
-		{ -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
-		{  0.5f,  0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
 
-		// second quad (further from camera, green)
-		{ -0.75f,  0.75f,  0.7f, 0.0f, 1.0f, 0.0f, 1.0f },
-		{   0.0f,  0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f },
-		{ -0.75f,  0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f },
-		{   0.0f,  0.75f,  0.7f, 0.0f, 1.0f, 0.0f, 1.0f }
+		{ -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+		{ 0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+		{ 0.5f, 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+		{ -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+
+		{ -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+		{ 0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+		{ 0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+		{ -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+
 	};
 
 	int vBufferSize = sizeof(vList);
@@ -260,8 +260,29 @@ void Engine::CreateVertexBuffer()
 
 	// index buffer
 	DWORD iList[] = {
-		0, 1, 2, // first triangle
-		0, 3, 1 // second triangle
+		// front
+		0, 1, 2,
+		0, 2, 3,
+
+		// back
+		4, 7, 6,
+		4, 6, 5,
+
+		// left
+		0, 3, 7,
+		0, 7, 4,
+
+		// right
+		1, 6, 2,
+		1, 5, 6,
+
+		// up
+		3, 6, 7,
+		3, 2, 6,
+
+		// down
+		0, 4, 5,
+		0, 5, 1
 	};
 
 	int iBufferSize = sizeof(iList);
@@ -583,9 +604,19 @@ void Engine::UpdateWvp(float deltaSec)
 	{
 		m_cameraRotation.y += rotationSpeed * m_mouseDeltaX;
 		m_cameraRotation.x += rotationSpeed * m_mouseDeltaY;
+		if (m_cameraRotation.x < -XM_PIDIV2)
+		{
+			m_cameraRotation.x = -XM_PIDIV2;
+		}
+		else if (m_cameraRotation.x > XM_PIDIV2)
+		{
+			m_cameraRotation.x = XM_PIDIV2;
+		}
 
-		m_mouseDeltaX = 0.0f;
-		m_mouseDeltaY = 0.0f;
+		XMVECTOR cameraRotation = XMLoadFloat4(&m_cameraRotation);
+		cameraRotation = XMVectorModAngles(cameraRotation);
+		XMStoreFloat4(&m_cameraRotation, cameraRotation);
+
 		viewHasChanged = true;
 	}
 
@@ -755,18 +786,6 @@ void Engine::Init(HWND hwnd)
 
 void Engine::Input(float mouseX, float mouseY, bool rightMouseBtnIsDown)
 {
-	bool buttonPressed = (!m_rightMouseBtnPressed && rightMouseBtnIsDown);
-	bool buttonReleased = (m_rightMouseBtnPressed && !rightMouseBtnIsDown);
-
-	if (buttonPressed)
-	{
-		ShowCursor(false);
-	}
-	else if (buttonReleased)
-	{
-		ShowCursor(true);
-	}
-
 	if (rightMouseBtnIsDown)
 	{
 		m_mouseDeltaX += (mouseX - m_mouseX);
@@ -775,9 +794,7 @@ void Engine::Input(float mouseX, float mouseY, bool rightMouseBtnIsDown)
 
 	m_mouseX = mouseX;
 	m_mouseY = mouseY;
-	m_rightMouseBtnPressed = rightMouseBtnIsDown;
 }
-
 
 void Engine::Update()
 {
@@ -810,12 +827,8 @@ void Engine::Update()
 
 	memcpy(m_cbWvpGpuAddress[m_frameIndex], &m_wvpData, sizeof(Wvp));
 
-	if (m_mouseDeltaX != 0.0f || m_mouseDeltaY != 0.0f)
-	{
-		POINT mousePoint = { m_mouseX - m_mouseDeltaX, m_mouseY - m_mouseDeltaY };
-		ClientToScreen(m_hwnd, &mousePoint);
-		SetCursorPos(mousePoint.x, mousePoint.y);
-	}
+	m_mouseDeltaX = 0.0f;
+	m_mouseDeltaY = 0.0f;
 }
 
 void Engine::Render()
@@ -860,8 +873,7 @@ void Engine::Render()
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 	m_commandList->IASetIndexBuffer(&m_indexBufferView);
-	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	m_commandList->DrawIndexedInstanced(6, 1, 0, 4, 0);
+	m_commandList->DrawIndexedInstanced(36, 1, 0, 0, 0);
 
 	// indicate that the back buffer will be used to present
 	m_commandList->ResourceBarrier(1, 
